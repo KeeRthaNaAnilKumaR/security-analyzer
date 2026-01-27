@@ -1,16 +1,57 @@
-# React + Vite
+A modern, clean, and professional web-based admin dashboard designed for the offline analysis of web server access logs. This application leverages React.js and NLP-driven logic to identify threats, analyze IP behavior, and visualize security trends.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+🚀 Key Features
+Secure Admin Authentication: Centered login layout for restricted administrative access.
 
-Currently, two official plugins are available:
+Automated Log Parsing: Handles .log and .csv files locally for efficient offline analysis.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Threat Detection: Displays identified security events with color-coded severity levels (Low, Medium, High).
 
-## React Compiler
+IP Analysis: Tracks unique IP addresses, highlights suspicious behavior, and identifies user-agents.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Data Visualizations: Interactive Bar and Line charts representing HTTP status distributions and request volume over time.
 
-## Expanding the ESLint configuration
+NLP Integration: Analyzes frequently occurring security-related terms within raw log data.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🛠️ Tech Stack
+Frontend: React.js (Vite)
+
+Styling: CSS3 / Tailwind CSS
+
+Icons: Lucide-React
+
+Charts: Recharts
+
+Navigation: State-based conditional rendering for internal dashboard views
+
+📂 Project Structure
+Plaintext
+src/
+├── components/     # Reusable UI elements (Navbar, Header)
+├── pages/          # Dashboard, Threats, IP Analysis, Visualizations
+├── styles/         # Global and component-specific CSS
+└── utils/          # Log parsing and NLP logic
+⚙️ Installation & Setup
+To run this project locally, follow these steps:
+
+Clone the repository:
+
+Bash
+git clone https://github.com/YOUR-USERNAME/security-analyzer.git
+cd security-analyzer
+Install dependencies:
+
+Bash
+npm install
+Start the development server:
+
+Bash
+npm run dev
+🎯 Target Audience
+This project is developed as part of a final-year academic curriculum, intended for:
+
+College Evaluators and Faculty Reviewers
+
+Cybersecurity Enthusiasts
+
+Data Analysts
