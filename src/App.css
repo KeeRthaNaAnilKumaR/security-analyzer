@@ -1,0 +1,13 @@
+.app {
+  min-height: 100vh;
+  background: var(--primary-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 0;
+  background: var(--primary-bg);
+  min-height: calc(100vh - 80px);
+}

@@ -1,0 +1,176 @@
+.ip-analysis-container {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.ip-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.ip-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all var(--transition-normal);
+}
+
+.ip-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.ip-stat-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.ip-stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-accent);
+  margin-bottom: 0.5rem;
+}
+
+.ip-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.ip-table-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h3 {
+  font-size: 1.3rem;
+}
+
+.export-btn {
+  padding: 0.7rem 1.5rem;
+  background: var(--primary-accent);
+  color: white;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all var(--transition-normal);
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.ip-table-container {
+  overflow-x: auto;
+}
+
+.ip-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ip-table thead {
+  background: var(--secondary-bg);
+}
+
+.ip-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ip-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background var(--transition-fast);
+}
+
+.ip-table tbody tr:hover {
+  background: var(--secondary-bg);
+}
+
+.ip-table td {
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.ip-code {
+  background: var(--secondary-bg);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--primary-accent);
+  font-size: 0.85rem;
+}
+
+.agent-code {
+  background: var(--secondary-bg);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.status-badge {
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge.suspicious {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.status-badge.normal {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+
+.action-btn-small {
+  padding: 0.5rem 1rem;
+  background: var(--secondary-bg);
+  color: var(--primary-accent);
+  border: 1px solid var(--primary-accent);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: all var(--transition-fast);
+}
+
+.action-btn-small:hover {
+  background: var(--primary-accent);
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .ip-analysis-container {
+    padding: 1rem;
+  }
+}
