@@ -231,13 +231,10 @@ const LogUpload = () => {
           <h3>🔍 What We Analyze</h3>
           <ul className="analysis-list">
             <li>SQL Injection attempts</li>
-            <li>Cross-Site Scripting (XSS)</li>
             <li>Directory traversal attacks</li>
-            <li>Brute force login attempts</li>
             <li>Suspicious user agents</li>
-            <li>Unusual request patterns</li>
-            <li>DDoS indicators</li>
-            <li>Bot traffic detection</li>
+            <li>High-frequency request behavior</li>
+            <li>Abnormal HTTP status code patterns</li>
           </ul>
 
           <div className="info-note">

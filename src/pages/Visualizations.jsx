@@ -21,6 +21,8 @@ const Visualizations = () => {
     { term: 'DDoS', size: 1.5, count: 45 },
     { term: 'Bot', size: 2.6, count: 104 },
     { term: 'Malware', size: 1.7, count: 56 },
+    { term: 'Phishing', size: 2.0, count: 75 },
+    { term: 'Ransomware', size: 1.9, count: 68 },
   ];
 
   return (

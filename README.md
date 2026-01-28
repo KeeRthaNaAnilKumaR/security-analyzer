@@ -27,31 +27,8 @@ Navigation: State-based conditional rendering for internal dashboard views
 📂 Project Structure
 Plaintext
 src/
-├── components/     # Reusable UI elements (Navbar, Header)
+├── components/     # Reusable UI elements (Navbar)
 ├── pages/          # Dashboard, Threats, IP Analysis, Visualizations
 ├── styles/         # Global and component-specific CSS
 └── utils/          # Log parsing and NLP logic
 ⚙️ Installation & Setup
-To run this project locally, follow these steps:
-
-Clone the repository:
-
-Bash
-git clone https://github.com/YOUR-USERNAME/security-analyzer.git
-cd security-analyzer
-Install dependencies:
-
-Bash
-npm install
-Start the development server:
-
-Bash
-npm run dev
-🎯 Target Audience
-This project is developed as part of a final-year academic curriculum, intended for:
-
-College Evaluators and Faculty Reviewers
-
-Cybersecurity Enthusiasts
-
-Data Analysts
