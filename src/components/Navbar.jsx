@@ -1,7 +1,7 @@
 import React from 'react';
 import './Navbar.css';
 
-const Navbar = ({ currentPage, setCurrentPage, username, onLogout }) => {
+const Navbar = ({ currentPage, setCurrentPage, username, onLogout, toggleTheme, theme }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'upload', label: 'Log Upload', icon: '📂' },
@@ -38,6 +38,13 @@ const Navbar = ({ currentPage, setCurrentPage, username, onLogout }) => {
           <div className="user-info">
             <div className="user-avatar">{username.charAt(0).toUpperCase()}</div>
             <span className="user-name">{username}</span>
+          </div>
+          <div className="theme-toggle" onClick={toggleTheme}>
+            <div className={`toggle-switch ${theme === 'light' ? 'light' : ''}`}>
+              <div className="toggle-circle">
+                {theme === 'dark' ? '🌙' : '☀️'}
+              </div>
+            </div>
           </div>
           <button className="logout-btn" onClick={onLogout} title="Logout">
             <span>🚪</span> Logout

@@ -419,4 +419,26 @@
   .results-actions {
     flex-direction: column;
   }
+  .action-btn.secondary:hover {
+    background: rgba(239, 68, 68, 0.1); /* Subtle red tint on hover */
+    border-color: var(--danger);
+    color: var(--danger);
+}
+.clear-data-container {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  width: 80%;
+}
+
+.clear-btn {
+  border-color: #ef4444 !important; /* Use red for danger */
+  color: #ef4444 !important;
+  font-size: 0.85rem !important;
+  padding: 8px 16px !important;
+}
+
+.clear-btn:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
 }

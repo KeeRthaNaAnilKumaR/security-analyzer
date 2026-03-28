@@ -134,19 +134,7 @@
   gap: 2rem;
 }
 
-.pie-chart {
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  position: relative;
-  background: conic-gradient(
-    #ef4444 0% 35%,
-    #f59e0b 35% 60%,
-    #3b82f6 60% 80%,
-    #8b5cf6 80% 100%
-  );
-  box-shadow: var(--shadow-md);
-}
+
 
 .pie-legend {
   display: flex;
@@ -234,4 +222,101 @@
   .bar-item {
     grid-template-columns: 50px 1fr;
   }
+}
+
+/* Enhanced Pie Chart Styles */
+.svg-pie-wrapper {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.svg-pie-wrapper svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible; /* CRITICAL: Ensures the SVG paths aren't clipped */
+}
+
+.pie-slice {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  cursor: pointer;
+  stroke: var(--card-bg);
+  stroke-width: 0.03;
+  transform-origin: center; /* Ensures it expands from the middle */
+}
+
+.pie-slice:hover {
+  /* Instead of just scale, we use a slight translate to "pop" the slice out */
+  transform: scale(1.08); 
+  opacity: 1;
+  filter: brightness(1.1); /* Makes the color pop on hover */
+}
+
+.pie-center-label {
+  position: absolute;
+  /* Top/Left 50% combined with translate(-50%, -50%) is the golden rule for centering */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  width: 100px; /* Slightly larger for readability */
+  height: 100px;
+  background: var(--card-bg);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  pointer-events: none; /* Allows mouse to still hover slices underneath */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.total-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--primary-accent);
+  margin: 0;
+  line-height: 1;
+}
+
+.total-text {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.legend-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.legend-term {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.legend-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.highlight-on-hover:hover {
+  background: var(--secondary-bg);
+  border-radius: 8px;
+  padding-left: 5px;
+  transition: all 0.2s ease;
 }

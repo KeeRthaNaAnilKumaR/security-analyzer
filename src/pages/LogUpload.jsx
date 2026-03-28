@@ -7,6 +7,7 @@ const LogUpload = () => {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [dragActive, setDragActive] = useState(false);
 
+  // --- DRAG AND DROP HANDLERS ---
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -21,7 +22,7 @@ const LogUpload = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange({ target: { files: e.dataTransfer.files } });
     }
@@ -30,39 +31,72 @@ const LogUpload = () => {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      if (selectedFile.name.endsWith('.log') || selectedFile.name.endsWith('.txt')) {
+      // Logic now explicitly accepts both .log and .txt
+      const fileName = selectedFile.name.toLowerCase();
+      if (fileName.endsWith('.log') || fileName.endsWith('.txt')) {
         setFile(selectedFile);
         setUploadStatus(null);
       } else {
-        alert('Please select a .log or .txt file');
+        alert('Format Error: Please select a valid .log or .txt file');
       }
     }
   };
 
-  const handleUpload = () => {
-    if (!file) return;
-    
-    setUploading(true);
-    setUploadStatus({ type: 'uploading', message: 'Uploading file...' });
+  // --- DATABASE CLEAR LOGIC ---
+  const handleClearData = async () => {
+    if (!window.confirm("Warning: This will permanently wipe all logs and detected threat records from SQL Server. Continue?")) {
+      return;
+    }
 
-    // Simulate upload process
-    setTimeout(() => {
-      setUploadStatus({ type: 'parsing', message: 'Parsing log entries...' });
-      
-      setTimeout(() => {
-        setUploadStatus({ 
-          type: 'success', 
-          message: 'Analysis complete!',
-          stats: {
-            totalEntries: Math.floor(Math.random() * 10000) + 5000,
-            threats: Math.floor(Math.random() * 100) + 20,
-            uniqueIPs: Math.floor(Math.random() * 500) + 100,
-            processingTime: (Math.random() * 3 + 1).toFixed(2)
-          }
-        });
-        setUploading(false);
-      }, 2000);
-    }, 1500);
+    try {
+      const response = await fetch('http://localhost:3001/api/clear-database', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert("Database Purged: All records have been deleted.");
+        setUploadStatus(null);
+        setFile(null);
+        // Optional: Clear visuals cache if you want the charts to reset too
+        // localStorage.removeItem('saved_logs');
+        // localStorage.removeItem('saved_events');
+      } else {
+        alert("Error: Database could not be cleared. Check server logs.");
+      }
+    } catch (error) {
+      console.error("Clear Error:", error);
+      alert("Network Error: Server appears to be offline.");
+    }
+  };
+
+  // --- UPLOAD & ANALYSIS LOGIC ---
+  const handleUpload = async () => {
+    if (!file) return;
+
+    setUploading(true);
+    setUploadStatus({ type: 'uploading', message: 'The Python Analysis Engine is scanning for SQLi and XSS signatures...' });
+
+    const formData = new FormData();
+    formData.append('logFile', file);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/upload', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Connection': 'keep-alive' }
+      });
+
+      if (response.ok) {
+        setUploadStatus({ type: 'success', message: 'Deep Scan Complete! Threat data persisted to SQL Server.' });
+      } else {
+        setUploadStatus({ type: 'error', message: 'Analysis Interrupted: Check file encoding or server state.' });
+      }
+    } catch (error) {
+      console.error("Upload Error:", error);
+      setUploadStatus({ type: 'error', message: 'Critical Error: Analysis request timed out.' });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -76,14 +110,13 @@ const LogUpload = () => {
   return (
     <div className="upload-container fade-in">
       <div className="upload-header">
-        <h2>Log File Upload & Analysis</h2>
-        <p className="text-secondary">Upload your web server access logs for security analysis</p>
+        <h2>Security Log Ingestion</h2>
+        <p className="text-secondary">Analyze heterogeneous log data using Regex-based Pattern Matching</p>
       </div>
 
       <div className="upload-content">
-        {/* Upload Section */}
         <div className="upload-section">
-          <div 
+          <div
             className={`upload-dropzone ${dragActive ? 'drag-active' : ''} ${file ? 'has-file' : ''}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -92,11 +125,12 @@ const LogUpload = () => {
           >
             {!file ? (
               <>
-                <div className="upload-icon">📂</div>
-                <h3>Drag & Drop Your Log File</h3>
-                <p>or</p>
+                <div className="upload-icon">📄</div>
+                <h3>Drag & Drop Log Source</h3>
+                <p>Drop your <strong>.log</strong> or <strong>.txt</strong> file here</p>
+                
                 <label htmlFor="file-input" className="upload-button">
-                  Browse Files
+                  Browse Local Files
                 </label>
                 <input
                   id="file-input"
@@ -105,140 +139,77 @@ const LogUpload = () => {
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />
-                <p className="upload-hint">Supports .log and .txt files (Max 100MB)</p>
-              </>
-            ) : (
-              <>
-                <div className="file-preview">
-                  <div className="file-icon">📄</div>
-                  <div className="file-details">
-                    <h4>{file.name}</h4>
-                    <p>{formatFileSize(file.size)}</p>
-                    <p className="file-date">
-                      Added: {new Date().toLocaleString()}
-                    </p>
-                  </div>
-                  <button 
-                    className="remove-file-btn"
-                    onClick={() => {
-                      setFile(null);
-                      setUploadStatus(null);
-                    }}
+
+                <div className="clear-data-container">
+                  <button
+                    className="action-btn secondary clear-btn"
+                    onClick={handleClearData}
+                    title="Wipe SQL Server tables"
                   >
-                    ✕
+                    🗑️ Reset Database State
                   </button>
                 </div>
-                
-                <button 
-                  className="analyze-button"
-                  onClick={handleUpload}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <>
-                      <span className="loading-spinner"></span>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <span>🔍</span>
-                      Upload & Analyze
-                    </>
-                  )}
-                </button>
+
+                <p className="upload-hint">Supported extensions: .log, .txt (Plain Text Encoding)</p>
               </>
+            ) : (
+              <div className="file-preview">
+                <div className="file-icon">{file.name.endsWith('.txt') ? '📝' : '📊'}</div>
+                <div className="file-details">
+                  <h4>{file.name}</h4>
+                  <p>{formatFileSize(file.size)}</p>
+                  <p className="file-date">Source: Text/Plain</p>
+                </div>
+                <button
+                  className="remove-file-btn"
+                  onClick={() => { setFile(null); setUploadStatus(null); }}
+                  title="Remove file"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {file && !uploading && (
+              <button className="analyze-button" onClick={handleUpload}>
+                <span>🚀</span> Start Security Analysis
+              </button>
+            )}
+
+            {uploading && (
+              <div className="analyze-button disabled">
+                <span className="loading-spinner"></span> Running Heuristics...
+              </div>
             )}
           </div>
 
-          {/* Status Messages */}
           {uploadStatus && (
             <div className={`status-message status-${uploadStatus.type}`}>
-              {uploadStatus.type === 'uploading' && (
-                <>
-                  <span className="loading-spinner"></span>
-                  <span>{uploadStatus.message}</span>
-                </>
-              )}
-              
-              {uploadStatus.type === 'parsing' && (
-                <>
-                  <span className="loading-spinner"></span>
-                  <span>{uploadStatus.message}</span>
-                </>
-              )}
-              
-              {uploadStatus.type === 'success' && (
-                <>
-                  <span>✅</span>
-                  <span>{uploadStatus.message}</span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Analysis Results */}
-          {uploadStatus?.type === 'success' && (
-            <div className="analysis-results">
-              <h3>Analysis Summary</h3>
-              <div className="results-grid">
-                <div className="result-card">
-                  <div className="result-icon">📊</div>
-                  <div className="result-value">{uploadStatus.stats.totalEntries.toLocaleString()}</div>
-                  <div className="result-label">Log Entries Processed</div>
-                </div>
-                <div className="result-card">
-                  <div className="result-icon">🚨</div>
-                  <div className="result-value">{uploadStatus.stats.threats}</div>
-                  <div className="result-label">Threats Detected</div>
-                </div>
-                <div className="result-card">
-                  <div className="result-icon">🌐</div>
-                  <div className="result-value">{uploadStatus.stats.uniqueIPs}</div>
-                  <div className="result-label">Unique IP Addresses</div>
-                </div>
-                <div className="result-card">
-                  <div className="result-icon">⏱️</div>
-                  <div className="result-value">{uploadStatus.stats.processingTime}s</div>
-                  <div className="result-label">Processing Time</div>
-                </div>
-              </div>
-              <div className="results-actions">
-                <button className="action-btn primary">View Threats →</button>
-                <button className="action-btn secondary">Download Report</button>
-              </div>
+              {uploadStatus.type === 'uploading' && <span className="loading-spinner"></span>}
+              {uploadStatus.type === 'success' && <span>✅</span>}
+              {uploadStatus.type === 'error' && <span>❌</span>}
+              <span>{uploadStatus.message}</span>
             </div>
           )}
         </div>
 
-        {/* Info Panel */}
         <div className="info-panel">
-          <h3>📋 Supported Log Formats</h3>
+          <h3>📋 Architecture Specifications</h3>
           <ul className="format-list">
-            <li>
-              <strong>Apache Access Logs</strong>
-              <code>access.log</code>
-            </li>
-            <li>
-              <strong>Nginx Access Logs</strong>
-              <code>access.log</code>
-            </li>
-            <li>
-              <strong>Custom Web Server Logs</strong>
-              <code>.log, .txt</code>
-            </li>
+            <li><strong>Input:</strong> UTF-8 encoded plain text</li>
+            <li><strong>Engine:</strong> Python 3 / Regex Pattern Matching</li>
+            <li><strong>Storage:</strong> MS SQL Server (Relational)</li>
           </ul>
 
-          <h3>🔍 What We Analyze</h3>
+          <h3>🔍 Attack Vector Coverage</h3>
           <ul className="analysis-list">
-            <li>SQL Injection attempts</li>
-            <li>Directory traversal attacks</li>
-            <li>Suspicious user agents</li>
-            <li>High-frequency request behavior</li>
-            <li>Abnormal HTTP status code patterns</li>
+            <li><strong>SQLi:</strong> Keywords (UNION, SELECT, DROP)</li>
+            <li><strong>XSS:</strong> Script tags and event handlers</li>
+            <li><strong>Path Traversal:</strong> Unauthorized directory access</li>
           </ul>
 
           <div className="info-note">
-            <strong>💡 Note:</strong> All processing is done locally. Your log files are not sent to any external servers.
+            <strong>💡 Pro Tip:</strong> Uploading <code>.txt</code> dumps from legacy systems is now fully supported.
           </div>
         </div>
       </div>

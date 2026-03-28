@@ -1,68 +1,128 @@
 import express from 'express';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import sql from 'mssql';
 import cors from 'cors';
+import multer from 'multer';
+import { exec } from 'child_process';
+import path from 'path';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-let db;
+const PORT = 3001;
 
-// Initialize Database
-// Initialize Database with your specific schema
-(async () => {
-    db = await open({
-        filename: './security_analysis.db',
-        driver: sqlite3.Database
-    });
-
-    // Table 1: Stores every parsed log entry
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS parsed_logs (
-            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME NOT NULL,
-            ip_address TEXT NOT NULL,
-            req_method TEXT NOT NULL,
-            req_url TEXT NOT NULL,
-            status_code INTEGER NOT NULL,
-            response_size INTEGER,
-            user_agent TEXT,
-            event_type TEXT,
-            security_level TEXT
-        )
-    `);
-
-    // Table 2: Stores specific security-related events
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS security_events (
-            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            log_id INTEGER,
-            timestamp DATETIME NOT NULL,
-            ip_address TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            event_description TEXT,
-            security_level TEXT NOT NULL,
-            detection_rule TEXT,
-            FOREIGN KEY (log_id) REFERENCES parsed_logs(log_id)
-        )
-    `);
-    console.log("✅ SQLite Database Ready with Parsed_Logs and Security_Events tables.");
-})();
-
-// Basic API to get logs
-app.get('/api/logs', async (req, res) => {
-    try {
-        const logs = await db.all('SELECT * FROM logs ORDER BY id DESC');
-        res.json(logs);
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch logs" });
+// --- UPDATED MULTER CONFIGURATION ---
+const storage = multer.diskStorage({
+    destination: 'uploads/',
+    filename: (req, file, cb) => {
+        // Keeps original extension but adds timestamp to prevent name collisions
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
 
-const PORT = 3001;
-// Add this to server.js
-app.get('/', (req, res) => {
-    res.send('Security Analyzer API is running...');
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // Increased to 50MB for larger log files
+    fileFilter: (req, file, cb) => {
+        const filetypes = /log|txt|text/; // Support .log and .txt variants
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        
+        if (extname) {
+            return cb(null, true);
+        }
+        cb(new Error("Error: File upload only supports .log or .txt files!"));
+    }
 });
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+
+const config = {
+    user: 'keer_user',
+    password: 'root123',
+    server: '127.0.0.1',
+    database: 'SecurityAnalyzerDB',
+    options: {
+        instanceName: 'SQLEXPRESS',
+        encrypt: false,
+        trustServerCertificate: true,
+        port: 1433
+    }
+};
+
+let pool;
+
+app.get('/', (req, res) => {
+    res.send('<h1>✅ Security Analyzer API Online</h1>');
+});
+
+// --- UPDATED UPLOAD & ANALYSIS ROUTE ---
+app.post('/api/upload', upload.single('logFile'), (req, res) => {
+    if (!req.file) return res.status(400).send('No file uploaded.');
+
+    // path.resolve ensures the Python script gets the FULL absolute path
+    const filePath = path.resolve(req.file.path);
+    const pythonCmd = process.platform === "win32" ? "python" : "python3";
+
+    console.log(`📂 Processing: ${req.file.originalname} -> ${filePath}`);
+
+    // Wrapped filePath in escaped quotes to handle filenames with spaces
+    exec(`${pythonCmd} analyzer.py "${filePath}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`❌ Analysis Error: ${error.message}`);
+            return res.status(500).json({ error: "Analysis engine failed" });
+        }
+        if (stderr) console.warn(`⚠️ Python Warning: ${stderr}`);
+        
+        console.log(`✅ Success: Processed ${req.file.originalname}`);
+        res.json({ message: `Analysis complete for ${req.file.originalname}!` });
+    });
+});
+
+// GET ROUTES
+app.get('/api/logs', async (req, res) => {
+    try {
+        const result = await pool.request().query('SELECT * FROM parsed_logs ORDER BY timestamp DESC');
+        res.json(result.recordset);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/events', async (req, res) => {
+    try {
+        const result = await pool.request().query('SELECT * FROM security_events ORDER BY timestamp DESC');
+        res.json(result.recordset);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// CLEAR DATABASE ROUTE
+app.delete('/api/clear-database', async (req, res) => {
+    if (!pool) return res.status(500).json({ error: "Database not connected" });
+    const transaction = new sql.Transaction(pool); 
+    try {
+        await transaction.begin();
+        const request = new sql.Request(transaction);
+        await request.query('DELETE FROM security_events');
+        await request.query('DELETE FROM parsed_logs');
+        await request.query("DBCC CHECKIDENT ('security_events', RESEED, 0)");
+        await request.query("DBCC CHECKIDENT ('parsed_logs', RESEED, 0)");
+        await transaction.commit();
+        console.log("🗑️ Database cleared successfully.");
+        res.json({ message: "Database cleared successfully!" });
+    } catch (err) {
+        if (transaction._isStarted) await transaction.rollback();
+        res.status(500).json({ error: "Database clear failed", details: err.message });
+    }
+});
+
+async function startServer() {
+    try {
+        pool = await sql.connect(config); 
+        console.log("✅ Connected to SQL Server");
+        const server = app.listen(PORT, () => {
+            console.log(`🚀 API running on http://localhost:${PORT}`);
+        });
+        server.timeout = 120000; // Increased timeout to 2 mins for large logs
+    } catch (err) {
+        console.error("❌ Connection Failed:", err);
+    }
+}
+
+startServer();

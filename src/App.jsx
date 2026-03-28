@@ -13,7 +13,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [currentPage, setCurrentPage] = useState('dashboard');
-
+  const [theme, setTheme] = useState('dark');
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
   const handleLogin = (user) => {
     setUsername(user);
     setIsAuthenticated(true);
@@ -45,23 +48,25 @@ function App() {
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
   }
-return (
-  <div className="app-container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-    {/* This is your fixed left sidebar navigation */}
-    <Navbar
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
-      username={username}
-      onLogout={handleLogout}
-    />
-    
-    <div className="content-wrapper" style={{ flex: 1 }}>
-      <main className="main-content p-6">
-        {renderPage()}
-      </main>
+  return (
+    <div className="app-container" data-theme={theme} style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* This is your fixed left sidebar navigation */}
+      <Navbar
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        username={username}
+        onLogout={handleLogout}
+        toggleTheme={toggleTheme}
+        theme={theme}
+      />
+
+      <div className="content-wrapper" style={{ flex: 1 }}>
+        <main className="main-content p-6">
+          {renderPage()}
+        </main>
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default App;

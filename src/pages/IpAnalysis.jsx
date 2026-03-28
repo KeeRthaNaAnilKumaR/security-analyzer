@@ -1,49 +1,112 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './IPAnalysis.css';
 
 const IPAnalysis = () => {
-  const topIPs = [
-    { ip: '192.168.1.105', requests: 2847, suspicious: true, country: 'Unknown', lastSeen: '2026-01-27 14:32', userAgent: 'Python/3.9' },
-    { ip: '203.45.67.89', requests: 1234, suspicious: true, country: 'China', lastSeen: '2026-01-27 14:28', userAgent: 'curl/7.68.0' },
-    { ip: '10.0.0.234', requests: 987, suspicious: false, country: 'US', lastSeen: '2026-01-27 14:15', userAgent: 'Chrome/120.0' },
-    { ip: '172.16.0.88', requests: 756, suspicious: false, country: 'UK', lastSeen: '2026-01-27 14:02', userAgent: 'Firefox/121.0' },
-    { ip: '45.67.89.123', requests: 642, suspicious: true, country: 'Russia', lastSeen: '2026-01-27 13:30', userAgent: 'Bot/1.0' },
-  ];
+  const [ipData, setIpData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/logs')
+      .then((res) => res.json())
+      .then((logs) => {
+        const grouped = logs.reduce((acc, log) => {
+          if (!acc[log.ip_address]) {
+            acc[log.ip_address] = {
+              ip: log.ip_address,
+              requests: 0,
+              suspicious: false,
+              lastSeen: log.timestamp,
+            };
+          }
+          acc[log.ip_address].requests += 1;
+          if (log.security_level === 'High') {
+            acc[log.ip_address].suspicious = true;
+          }
+          if (new Date(log.timestamp) > new Date(acc[log.ip_address].lastSeen)) {
+            acc[log.ip_address].lastSeen = log.timestamp;
+          }
+          return acc;
+        }, {});
+
+        setIpData(Object.values(grouped).sort((a, b) => b.requests - a.requests));
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching IP analysis:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // --- NEW: CSV DOWNLOAD LOGIC ---
+  const downloadCSV = () => {
+    if (ipData.length === 0) return;
+
+    // Define Headers
+    const headers = ["IP Address", "Total Requests", "Last Seen", "Status"];
+    
+    // Map data to rows
+    const rows = ipData.map(item => [
+      item.ip,
+      item.requests,
+      new Date(item.lastSeen).toLocaleString(),
+      item.suspicious ? "Suspicious" : "Normal"
+    ]);
+
+    // Combine headers and rows into a string
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.join(","))
+    ].join("\n");
+
+    // Create a blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `IP_Analysis_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const stats = {
+    totalUnique: ipData.length,
+    suspicious: ipData.filter(item => item.suspicious).length,
+    totalRequests: ipData.reduce((sum, item) => sum + item.requests, 0)
+  };
+
+  if (loading) return <div className="loading">Analyzing Traffic Patterns...</div>;
 
   return (
     <div className="ip-analysis-container fade-in">
       <div className="page-header">
         <h2>IP Address Analysis</h2>
-        <p className="text-secondary">Detailed analysis of traffic sources and patterns</p>
+        <p className="text-secondary">Live analysis of traffic sources from SQL Server</p>
       </div>
 
       <div className="ip-stats-grid">
         <div className="ip-stat-card">
           <div className="ip-stat-icon">🌐</div>
-          <div className="ip-stat-value">1,847</div>
+          <div className="ip-stat-value">{stats.totalUnique.toLocaleString()}</div>
           <div className="ip-stat-label">Total Unique IPs</div>
         </div>
         <div className="ip-stat-card">
           <div className="ip-stat-icon">⚠️</div>
-          <div className="ip-stat-value">127</div>
+          <div className="ip-stat-value">{stats.suspicious}</div>
           <div className="ip-stat-label">Suspicious IPs</div>
         </div>
         <div className="ip-stat-card">
-          <div className="ip-stat-icon">🤖</div>
-          <div className="ip-stat-value">45</div>
-          <div className="ip-stat-label">Bot IPs Detected</div>
-        </div>
-        <div className="ip-stat-card">
-          <div className="ip-stat-icon">🚫</div>
-          <div className="ip-stat-value">23</div>
-          <div className="ip-stat-label">Blocked IPs</div>
+          <div className="ip-stat-icon">📊</div>
+          <div className="ip-stat-value">{stats.totalRequests.toLocaleString()}</div>
+          <div className="ip-stat-label">Total Requests Analyzed</div>
         </div>
       </div>
 
       <div className="ip-table-section">
         <div className="section-header">
           <h3>Top IP Addresses by Request Count</h3>
-          <button className="export-btn">📥 Export CSV</button>
+          {/* Attached downloadCSV to this button */}
+          <button className="export-btn" onClick={downloadCSV}>📥 Export CSV</button>
         </div>
         <div className="ip-table-container">
           <table className="ip-table">
@@ -51,35 +114,30 @@ const IPAnalysis = () => {
               <tr>
                 <th>IP Address</th>
                 <th>Total Requests</th>
-                <th>Country</th>
-                <th>User Agent</th>
                 <th>Last Seen</th>
                 <th>Status</th>
-                <th>Actions</th>
+                {/* Details column header removed */}
               </tr>
             </thead>
             <tbody>
-              {topIPs.map((item, index) => (
+              {ipData.map((item, index) => (
                 <tr key={index}>
                   <td>
                     <code className="ip-code">{item.ip}</code>
                   </td>
                   <td><strong>{item.requests.toLocaleString()}</strong></td>
-                  <td>{item.country}</td>
-                  <td><code className="agent-code">{item.userAgent}</code></td>
-                  <td className="timestamp">{item.lastSeen}</td>
+                  <td className="timestamp">{new Date(item.lastSeen).toLocaleString()}</td>
                   <td>
                     <span className={`status-badge ${item.suspicious ? 'suspicious' : 'normal'}`}>
                       {item.suspicious ? '⚠️ Suspicious' : '✓ Normal'}
                     </span>
                   </td>
-                  <td>
-                    <button className="action-btn-small">Details</button>
-                  </td>
+                  {/* Details column cell removed */}
                 </tr>
               ))}
             </tbody>
           </table>
+          {ipData.length === 0 && <p style={{textAlign: 'center', padding: '20px'}}>No IP data found.</p>}
         </div>
       </div>
     </div>

@@ -1,39 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Visualizations.css';
 
 const Visualizations = () => {
-  const statusCodes = [
-    { code: '200', count: 18234, color: '#10b981' },
-    { code: '404', count: 3421, color: '#f59e0b' },
-    { code: '500', count: 876, color: '#ef4444' },
-    { code: '403', count: 1245, color: '#8b5cf6' },
-    { code: '301', count: 2156, color: '#3b82f6' }
-  ];
+  const [logs, setLogs] = useState(JSON.parse(localStorage.getItem('saved_logs')) || []);
+  const [events, setEvents] = useState(JSON.parse(localStorage.getItem('saved_events')) || []);
+  const [loading, setLoading] = useState(logs.length === 0);
 
-  const maxCount = Math.max(...statusCodes.map(s => s.count));
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [logsRes, eventsRes] = await Promise.all([
+          fetch('http://localhost:3001/api/logs'),
+          fetch('http://localhost:3001/api/events')
+        ]);
+        const logsData = await logsRes.json();
+        const eventsData = await eventsRes.json();
 
-  const securityTerms = [
-    { term: 'SQL Injection', size: 3, count: 145 },
-    { term: 'XSS', size: 2.5, count: 98 },
-    { term: 'CSRF', size: 1.8, count: 67 },
-    { term: 'Brute Force', size: 2.8, count: 112 },
-    { term: 'Directory Traversal', size: 2.2, count: 82 },
-    { term: 'DDoS', size: 1.5, count: 45 },
-    { term: 'Bot', size: 2.6, count: 104 },
-    { term: 'Malware', size: 1.7, count: 56 },
-    { term: 'Phishing', size: 2.0, count: 75 },
-    { term: 'Ransomware', size: 1.9, count: 68 },
-  ];
+        if (logsData.length > 0) {
+          setLogs(logsData);
+          localStorage.setItem('saved_logs', JSON.stringify(logsData));
+        }
+        if (eventsData.length > 0) {
+          setEvents(eventsData);
+          localStorage.setItem('saved_events', JSON.stringify(eventsData));
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // --- LOGIC ---
+  const statusCounts = logs.reduce((acc, log) => {
+    const code = log.status_code || 'Unknown';
+    acc[code] = (acc[code] || 0) + 1;
+    return acc;
+  }, {});
+
+  const statusCodes = Object.entries(statusCounts).map(([code, count]) => ({
+    code,
+    count,
+    color: code.startsWith('2') ? '#10b981' : code.startsWith('4') ? '#f59e0b' : '#ef4444'
+  }));
+  const maxCount = Math.max(...statusCodes.map(s => s.count), 1);
+
+  const threatCounts = events.reduce((acc, event) => {
+    const type = event.event_type || 'Unknown';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+
+  // C. SVG Pie Chart Math & Fixed Categories
+  const totalThreats = events.length || 0;
+  const threatColorMap = {
+    "SQL Injection Attempt": "#ef4444",
+    "XSS Attempt": "#f59e0b",
+    "Suspicious Path": "#3b82f6",
+    "Unknown": "#8b5cf6"
+  };
+
+  // Ensure all categories exist even if count is 0
+  const finalPieData = Object.keys(threatColorMap).map(term => {
+    const count = threatCounts[term] || 0;
+    const percentage = totalThreats > 0 ? Math.round((count / totalThreats) * 100) : 0;
+    return { term, count, percentage, color: threatColorMap[term] };
+  });
+
+  // Filter for SVG drawing (only slices > 0)
+  const chartSlices = finalPieData.filter(d => d.count > 0);
+
+  let cumulativePercent = 0;
+  const getCoordinatesForPercent = (percent) => {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+  };
+
+  if (loading) return <div className="loading">Generating Security Visualizations...</div>;
 
   return (
     <div className="viz-container fade-in">
       <div className="page-header">
         <h2>Data Visualizations</h2>
-        <p className="text-secondary">Interactive charts and analysis</p>
+        <p className="text-secondary">Interactive analysis of {logs.length} total logs</p>
       </div>
 
       <div className="viz-grid">
-        {/* HTTP Status Codes */}
+        {/* Status Chart */}
         <div className="viz-card">
           <h3>HTTP Status Code Distribution</h3>
           <div className="bar-chart">
@@ -41,13 +97,7 @@ const Visualizations = () => {
               <div key={status.code} className="bar-item">
                 <div className="bar-label">{status.code}</div>
                 <div className="bar-wrapper">
-                  <div 
-                    className="bar-fill"
-                    style={{ 
-                      width: `${(status.count / maxCount) * 100}%`,
-                      background: status.color
-                    }}
-                  >
+                  <div className="bar-fill" style={{ width: `${(status.count / maxCount) * 100}%`, background: status.color }}>
                     <span className="bar-value">{status.count.toLocaleString()}</span>
                   </div>
                 </div>
@@ -56,100 +106,58 @@ const Visualizations = () => {
           </div>
         </div>
 
-        {/* Requests Over Time */}
-        <div className="viz-card">
-          <h3>Requests Over Last 24 Hours</h3>
-          <div className="line-chart">
-            <svg viewBox="0 0 400 200" className="line-svg">
-              <defs>
-                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="var(--primary-accent)" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="var(--primary-accent)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polyline
-                fill="url(#lineGradient)"
-                stroke="var(--primary-accent)"
-                strokeWidth="2"
-                points="0,150 40,120 80,100 120,130 160,80 200,90 240,70 280,100 320,60 360,80 400,50"
-              />
-            </svg>
-            <div className="chart-labels-x">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>24:00</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Security Terms Word Cloud */}
-        <div className="viz-card full-width">
-          <h3>Security-Related Terms Frequency</h3>
-          <div className="word-cloud">
-            {securityTerms.map((term, index) => (
-              <span 
-                key={index}
-                className="word-cloud-item"
-                style={{ 
-                  fontSize: `${term.size}rem`,
-                  animationDelay: `${index * 0.1}s`
-                }}
-                title={`${term.count} occurrences`}
-              >
-                {term.term}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Threat Distribution Pie */}
+        {/* Improved Doughnut Chart */}
         <div className="viz-card">
           <h3>Threat Type Distribution</h3>
           <div className="pie-chart-container">
-            <div className="pie-chart">
-              <div className="pie-segment seg-1" style={{ '--percentage': 35 }}></div>
-              <div className="pie-segment seg-2" style={{ '--percentage': 25 }}></div>
-              <div className="pie-segment seg-3" style={{ '--percentage': 20 }}></div>
-              <div className="pie-segment seg-4" style={{ '--percentage': 20 }}></div>
+            <div className="svg-pie-wrapper">
+              <svg viewBox="-1.2 -1.2 2.4 2.4" style={{ transform: 'rotate(-90deg)' }}>
+                {chartSlices.map((slice, i) => {
+                  const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                  cumulativePercent += slice.percentage / 100;
+                  const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                  const largeArcFlag = slice.percentage / 100 > 0.5 ? 1 : 0;
+                  const pathData = [
+                    `M ${startX} ${startY}`,
+                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                    `L 0 0`,
+                  ].join(' ');
+
+                  return (
+                    <path key={i} d={pathData} fill={slice.color} className="pie-slice">
+                      <title>{`${slice.term}: ${slice.percentage}%`}</title>
+                    </path>
+                  );
+                })}
+              </svg>
+              <div className="pie-center-label">
+                <span className="total-num">{events.length}</span>
+                <span className="total-text">Threats</span>
+              </div>
             </div>
+
             <div className="pie-legend">
-              <div className="legend-item">
-                <span className="legend-color" style={{ background: '#ef4444' }}></span>
-                <span>SQL Injection (35%)</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color" style={{ background: '#f59e0b' }}></span>
-                <span>XSS (25%)</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color" style={{ background: '#3b82f6' }}></span>
-                <span>Brute Force (20%)</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color" style={{ background: '#8b5cf6' }}></span>
-                <span>Other (20%)</span>
-              </div>
+              {finalPieData.map((slice, i) => (
+                <div key={i} className="legend-item highlight-on-hover">
+                  <span className="legend-color" style={{ background: slice.color }}></span>
+                  <div className="legend-info">
+                    <span className="legend-term">{slice.term}</span>
+                    <span className="legend-count">{slice.count} incidents ({slice.percentage}%)</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Traffic Sources */}
-        <div className="viz-card">
-          <h3>Top Traffic Sources</h3>
-          <div className="traffic-list">
-            {['United States', 'China', 'Russia', 'Germany', 'India'].map((country, index) => (
-              <div key={index} className="traffic-item">
-                <span className="traffic-country">{country}</span>
-                <div className="traffic-bar">
-                  <div 
-                    className="traffic-fill"
-                    style={{ width: `${100 - index * 15}%` }}
-                  ></div>
-                </div>
-                <span className="traffic-percent">{100 - index * 15}%</span>
-              </div>
+        {/* Word Cloud */}
+        <div className="viz-card full-width">
+          <h3>Detected Threat Frequency (Word Cloud)</h3>
+          <div className="word-cloud">
+            {Object.entries(threatCounts).map(([term, count], index) => (
+              <span key={index} className="word-cloud-item" style={{ fontSize: `${Math.min(3, 1 + (count / 10))}rem` }}>
+                {term}
+              </span>
             ))}
           </div>
         </div>

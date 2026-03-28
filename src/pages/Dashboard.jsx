@@ -1,80 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from your Node.js backend
+  useEffect(() => {
+    fetch('http://localhost:3001/api/logs') // Ensure this matches your server.js route
+      .then((res) => res.json())
+      .then((json) => {
+        setData(json);
+        setLoading(setLoading(false));
+      })
+      .catch((err) => console.error("Error fetching logs:", err));
+  }, []);
+
+  // Calculate stats dynamically from the database data
   const stats = [
     {
       title: 'Total Log Entries',
-      value: '24,531',
-      change: '+12.5%',
+      value: data.length.toLocaleString(),
       icon: '📝',
       color: 'blue'
     },
     {
       title: 'Unique IP Addresses',
-      value: '1,847',
-      change: '+8.2%',
+      value: [...new Set(data.map(item => item.ip_address))].length,
       icon: '🌐',
       color: 'purple'
     },
     {
-      title: 'Suspicious Events',
-      value: '342',
-      change: '-5.3%',
-      icon: '⚠️',
-      color: 'orange'
-    },
-    {
       title: 'High-Severity Alerts',
-      value: '23',
-      change: '-15.4%',
+      value: data.filter(item => item.security_level === 'High').length,
       icon: '🚨',
       color: 'red'
     }
   ];
 
-  const recentEvents = [
-    {
-      id: 1,
-      timestamp: '2026-01-27 14:32:15',
-      ip: '192.168.1.105',
-      event: 'SQL Injection Attempt',
-      url: '/admin/login.php?id=1\' OR \'1\'=\'1',
-      severity: 'High'
-    },
-    {
-      id: 2,
-      timestamp: '2026-01-27 14:28:42',
-      ip: '203.45.67.89',
-      event: 'Brute Force Attack',
-      url: '/wp-login.php',
-      severity: 'High'
-    },
-    {
-      id: 3,
-      timestamp: '2026-01-27 14:15:33',
-      ip: '10.0.0.234',
-      event: 'Directory Traversal',
-      url: '/files/../../etc/passwd',
-      severity: 'Medium'
-    },
-    {
-      id: 4,
-      timestamp: '2026-01-27 14:02:18',
-      ip: '172.16.0.88',
-      event: 'XSS Attempt Detected',
-      url: '/search?q=<script>alert(1)</script>',
-      severity: 'Medium'
-    },
-    {
-      id: 5,
-      timestamp: '2026-01-27 13:45:09',
-      ip: '192.168.5.12',
-      event: 'Unusual User-Agent',
-      url: '/api/users',
-      severity: 'Low'
-    }
-  ];
+  if (loading) return <div className="loading">Loading Security Data...</div>;
 
   return (
     <div className="dashboard-container fade-in">
@@ -92,63 +56,20 @@ const Dashboard = () => {
       {/* Stats Cards */}
       <div className="stats-grid">
         {stats.map((stat, index) => (
-          <div 
-            key={index} 
-            className={`stat-card stat-${stat.color}`}
-            style={{ animationDelay: `${index * 0.1}s` }}
-          >
+          <div key={index} className={`stat-card stat-${stat.color}`}>
             <div className="stat-icon">{stat.icon}</div>
             <div className="stat-content">
               <p className="stat-label">{stat.title}</p>
               <h3 className="stat-value">{stat.value}</h3>
-              <div className={`stat-change ${stat.change.startsWith('+') ? 'positive' : 'negative'}`}>
-                {stat.change.startsWith('+') ? '↗' : '↘'} {stat.change} from last week
-              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Activity Chart */}
+      {/* Recent Security Events Table */}
       <div className="dashboard-section">
         <div className="section-header">
-          <h3>Request Volume Over Time</h3>
-          <select className="time-filter">
-            <option>Last 24 Hours</option>
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-          </select>
-        </div>
-        <div className="chart-container">
-          <div className="chart-placeholder">
-            <div className="chart-bars">
-              {[65, 45, 75, 55, 85, 50, 90, 70, 60, 80, 55, 95].map((height, i) => (
-                <div 
-                  key={i} 
-                  className="chart-bar"
-                  style={{ 
-                    height: `${height}%`,
-                    animationDelay: `${i * 0.05}s`
-                  }}
-                >
-                  <div className="bar-tooltip">{Math.floor(height * 30)} requests</div>
-                </div>
-              ))}
-            </div>
-            <div className="chart-labels">
-              {['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'].map((label, i) => (
-                <span key={i}>{label}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Security Events */}
-      <div className="dashboard-section">
-        <div className="section-header">
-          <h3>Recent Security Events</h3>
-          <button className="view-all-btn">View All →</button>
+          <h3>Recent Security Events (From SQL Server)</h3>
         </div>
         <div className="events-table">
           <table>
@@ -162,27 +83,24 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {recentEvents.map((event) => (
-                <tr key={event.id}>
-                  <td className="timestamp">{event.timestamp}</td>
-                  <td className="ip-address">
-                    <code>{event.ip}</code>
-                  </td>
+              {data.slice(0, 10).map((log, index) => (
+                <tr key={index}>
+                  <td className="timestamp">{new Date(log.timestamp).toLocaleString()}</td>
+                  <td className="ip-address"><code>{log.ip_address}</code></td>
                   <td className="event-type">
-                    <span className="event-badge">{event.event}</span>
+                    <span className="event-badge">{log.event_type}</span>
                   </td>
-                  <td className="url">
-                    <code className="url-text">{event.url}</code>
-                  </td>
+                  <td className="url"><code className="url-text">{log.req_url}</code></td>
                   <td>
-                    <span className={`severity-badge severity-${event.severity.toLowerCase()}`}>
-                      {event.severity}
+                    <span className={`severity-badge severity-${log.security_level?.toLowerCase()}`}>
+                      {log.security_level}
                     </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {data.length === 0 && <p style={{textAlign: 'center', padding: '20px'}}>No data found. Run analyzer.py to populate logs.</p>}
         </div>
       </div>
     </div>
